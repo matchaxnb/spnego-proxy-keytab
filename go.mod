@@ -3,8 +3,8 @@ module app
 go 1.23.1
 
 require (
-	github.com/hashicorp/consul/api v1.29.4
-	github.com/jcmturner/gokrb5/v8 v8.4.4
+	github.com/hashicorp/consul/api v1.30.0
+	github.com/matchaxnb/gokrb5/v8 v8.4.5-prev2
 )
 
 require (

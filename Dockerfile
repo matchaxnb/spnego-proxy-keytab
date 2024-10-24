@@ -1,8 +1,6 @@
 FROM golang:latest
 WORKDIR /src
-COPY *.go .
-RUN rm -f go.mod go.sum
-RUN go mod init app
+COPY *.go go.mod go.sum .
 RUN go mod tidy
 RUN go build -o /spnego-proxy -ldflags '-linkmode external -extldflags "-fno-PIC -static"'
 FROM alpine:latest

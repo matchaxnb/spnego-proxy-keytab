@@ -16,10 +16,10 @@ import (
 
 	capi "github.com/hashicorp/consul/api"
 
-	"github.com/jcmturner/gokrb5/v8/client"
-	"github.com/jcmturner/gokrb5/v8/config"
-	"github.com/jcmturner/gokrb5/v8/keytab"
-	"github.com/jcmturner/gokrb5/v8/spnego"
+	"github.com/matchaxnb/gokrb5/v8/client"
+	"github.com/matchaxnb/gokrb5/v8/config"
+	"github.com/matchaxnb/gokrb5/v8/keytab"
+	"github.com/matchaxnb/gokrb5/v8/spnego"
 )
 
 var logger = log.New(os.Stderr, "", log.LstdFlags)
@@ -105,8 +105,9 @@ func main() {
 		logger.Printf("cannot read keytab: %s\n", err)
 		logger.Panic("no keytab no dice")
 	}
-	config, err := config.Load(*cfgFile)
-	if err != nil {
+	conf, err := config.Load(*cfgFile)
+	unsupErr := config.UnsupportedDirective{}
+	if err != nil && !errors.As(err, &unsupErr) {
 		logger.Printf("Bad config: %s\n", err)
 		logger.Panic("no config no dice")
 	}
@@ -116,7 +117,7 @@ func main() {
 		logger.Panicf("Cannot connect to consul: %s", err)
 	}
 	realHosts := startConsulGetService(consulClient, *proxy)
-	kclient := client.NewWithKeytab(*user, *realm, keytab, config, client.Logger(logger), client.DisablePAFXFAST(false))
+	kclient := client.NewWithKeytab(*user, *realm, keytab, conf, client.Logger(logger), client.DisablePAFXFAST(false))
 	kclient.Login()
 	spnegoClient, spnEnabled, realHost, err := buildSPNClient(realHosts, kclient, *spnServiceType)
 	if err != nil {
