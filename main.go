@@ -2,6 +2,7 @@ package main
 
 import (
 	"bufio"
+	"bytes"
 	"encoding/base64"
 	"errors"
 	"flag"
@@ -195,7 +196,15 @@ func handleClient(conn net.Conn, proxyHost string, spnegoCli *SPNEGOClient, debu
 			logger.Printf("forward start %v -> %v", fromAddr, toAddr)
 			defer logger.Printf("forward done %v -> %v", fromAddr, toAddr)
 		}
-		io.Copy(to, from)
+		if debug {
+			var lobBuffer bytes.Buffer
+			readSource := io.TeeReader(from, &lobBuffer)
+			io.Copy(to, readSource)
+			logger.Printf("Contents: %s\n", lobBuffer.String())
+		} else {
+			io.Copy(to, from)
+
+		}
 	}
 	wg.Add(2)
 	go forward(conn, proxyConn)
