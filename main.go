@@ -2,7 +2,6 @@ package main
 
 import (
 	"bufio"
-	"bytes"
 	"encoding/base64"
 	"errors"
 	"flag"
@@ -181,33 +180,29 @@ func handleClient(conn net.Conn, proxyHost string, spnegoCli *SPNEGOClient, debu
 		}
 		return
 	}
+	req.Host = proxyHost
 	req.Header.Set("Authorization", authHeader)
+	req.Header.Set("Connection", "close")
+	req.Header.Set("User-agent", "hadoop-proxy/0.1")
+
 	if debug {
 		req.WriteProxy(io.MultiWriter(proxyConn, os.Stdout))
 	} else {
 		req.WriteProxy(proxyConn)
 	}
 	var wg sync.WaitGroup
-	forward := func(from, to net.Conn) {
+	forward := func(from, to net.Conn, tag string) {
 		defer wg.Done()
 		defer to.(*net.TCPConn).CloseWrite()
 		if debug {
 			fromAddr, toAddr := from.RemoteAddr(), to.RemoteAddr()
-			logger.Printf("forward start %v -> %v", fromAddr, toAddr)
-			defer logger.Printf("forward done %v -> %v", fromAddr, toAddr)
+			logger.Printf("[%s] forward start %v -> %v", tag, fromAddr, toAddr)
+			defer logger.Printf("[%s] forward done %v -> %v", tag, fromAddr, toAddr)
 		}
-		if debug {
-			var lobBuffer bytes.Buffer
-			readSource := io.TeeReader(from, &lobBuffer)
-			io.Copy(to, readSource)
-			logger.Printf("Contents: %s\n", lobBuffer.String())
-		} else {
-			io.Copy(to, from)
-
-		}
+		io.Copy(to, from)
 	}
 	wg.Add(2)
-	go forward(conn, proxyConn)
-	go forward(proxyConn, conn)
+	go forward(conn, proxyConn, "local to proxied")
+	go forward(proxyConn, conn, "proxied to local")
 	wg.Wait()
 }
