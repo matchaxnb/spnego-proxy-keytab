@@ -1,0 +1,5 @@
+.git
+Dockerfile.*
+.dockerignore
+krb5.conf
+*.keytab

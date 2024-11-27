@@ -1,10 +1,10 @@
-module app
+module github.com/matchaxnb/spnegoproxy/consulspnegoproxy
 
 go 1.23.1
 
 require (
 	github.com/matchaxnb/gokrb5/v8 v8.4.5-prev2
-	github.com/matchaxnb/spnegoproxy v0.0.0-20241127125303-ee74bce769ed
+	github.com/matchaxnb/spnegoproxy/spnegoproxy v0.0.0-20241127134644-1909c37e9b8b
 )
 
 require (

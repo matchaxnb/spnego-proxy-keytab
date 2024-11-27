@@ -1,8 +1,13 @@
 FROM golang:latest
 WORKDIR /src
-COPY *.go go.mod go.sum spnegoproxy cmd /src/
+COPY go.* ./
+COPY cmd ./cmd/
+COPY spnegoproxy ./spnegoproxy/
+WORKDIR /src/cmd/plainproxy
 RUN go mod tidy
-RUN go build -o /spnego-proxy -ldflags '-linkmode external -extldflags "-fno-PIC -static"' ./cmd/plainproxy/main.go
+RUN printf "replace %s => ../../spnegoproxy" "$(egrep -o 'github.com/matchaxnb/spnegoproxy/spnegoproxy v.*' go.mod)" | tee -a go.mod
+RUN go build -o /spnego-proxy -ldflags '-linkmode external -extldflags "-fno-PIC -static"' .
+RUN grep replace go.mod
 FROM alpine:latest
 WORKDIR /data
 COPY --from=0 /spnego-proxy /spnego-proxy
