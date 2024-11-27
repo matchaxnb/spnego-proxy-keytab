@@ -1,0 +1,15 @@
+FROM golang:latest
+WORKDIR /src
+COPY *.go go.mod go.sum spnegoproxy cmd /src/
+RUN go mod tidy
+RUN go build -o /spnego-proxy -ldflags '-linkmode external -extldflags "-fno-PIC -static"' ./cmd/plainproxy/main.go
+FROM alpine:latest
+WORKDIR /data
+COPY --from=0 /spnego-proxy /spnego-proxy
+ENV LISTEN_ADDRESS="0.0.0.0:50070" \
+    SERVICE_TO_PROXY="" \
+    APP_DEBUG="false"
+SHELL [ "/bin/sh", "-c"]
+EXPOSE 50070
+COPY startup-plain.sh /startup.sh
+ENTRYPOINT [ "/startup.sh"]

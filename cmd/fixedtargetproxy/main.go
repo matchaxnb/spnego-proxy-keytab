@@ -17,20 +17,17 @@ func main() {
 	cfgFile := flag.String("config", "krb5.conf", "krb5 config file")
 	user := flag.String("user", "your.user/your.host", "user name")
 	realm := flag.String("realm", "YOUR.REALM", "realm")
-	consulAddress := flag.String("consul-address", "your.consul.host:8500", "consul server address")
-	consulToken := flag.String("consul-token", "", "consul access token (optional)")
-	proxy := flag.String("proxy-service", "your-service-to-proxy", "proxy consul service")
+	toProxy := flag.String("proxy-service", "your-service-to-proxy", "host:port for the service to proxy to")
 	spnServiceType := flag.String("spn-service-type", "HTTP", "SPN service type")
 	keytabFile := flag.String("keytab-file", "krb5.keytab", "keytab file path")
 	debug := flag.Bool("debug", true, "turn on debugging")
 	flag.Parse()
 	keytab, conf := spnegoproxy.LoadKrb5Config(keytabFile, cfgFile)
 
-	consulClient := spnegoproxy.BuildConsulClient(consulAddress, consulToken)
-	realHosts := spnegoproxy.StartConsulGetService(consulClient, *proxy)
+	toProxyAsList := spnegoproxy.HostnameToChanHostPort(*toProxy)
 	kclient := client.NewWithKeytab(*user, *realm, keytab, conf, client.Logger(logger), client.DisablePAFXFAST(false))
 	kclient.Login()
-	spnegoClient, spnEnabled, realHost, err := spnegoproxy.BuildSPNClient(realHosts, kclient, *spnServiceType)
+	spnegoClient, spnEnabled, realHost, err := spnegoproxy.BuildSPNClient(toProxyAsList, kclient, *spnServiceType)
 	if err != nil {
 		logger.Panic("Cannot get SPN for service, failing")
 	}

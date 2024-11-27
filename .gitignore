@@ -2,3 +2,4 @@ krb5.*
 app
 spnego-proxy
 Makefile
+plain-proxy

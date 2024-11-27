@@ -10,6 +10,8 @@ import (
 	"net"
 	"net/http"
 	"os"
+	"strconv"
+	"strings"
 	"sync"
 	"time"
 
@@ -25,6 +27,7 @@ var logger = log.New(os.Stderr, "[spnegoproxy]", log.LstdFlags)
 
 const MAX_ERROR_COUNT = 20
 const PAUSE_TIME_WHEN_ERROR = time.Minute * 1
+const PAUSE_TIME_WHEN_NO_DATA = time.Millisecond * 300
 
 type SPNEGOClient struct {
 	Client *spnego.SPNEGO
@@ -58,7 +61,7 @@ func BuildSPNClient(validHosts chan []HostPort, krbClient *client.Client, servic
 	}, spnStr, spnHost[0].f(), nil
 }
 
-func BoadKrb5Config(keytabFile *string, cfgFile *string) (*keytab.Keytab, *config.Config) {
+func LoadKrb5Config(keytabFile *string, cfgFile *string) (*keytab.Keytab, *config.Config) {
 	keytab, err := keytab.Load(*keytabFile)
 	if err != nil {
 		logger.Printf("cannot read keytab: %s\n", err)
@@ -90,6 +93,21 @@ func (c *SPNEGOClient) GetToken() (string, error) {
 	return base64.StdEncoding.EncodeToString(b), nil
 }
 
+func HostnameToChanHostPort(hostname string) chan []HostPort {
+	messages := make(chan []HostPort)
+	spl := strings.Split(hostname, ":")
+	if len(spl) != 2 {
+		logger.Panicf("Could not split %s by character : and get 2 bits", hostname)
+	}
+	portNum, err := strconv.Atoi(spl[1])
+	if err != nil {
+		logger.Panicf("Cannot parse %s to int: %s", spl[1], err)
+	}
+	hp := HostPort{spl[0], portNum}
+	messages <- []HostPort{hp}
+	return messages
+}
+
 func StartConsulGetService(client *capi.Client, serviceName string) chan []HostPort {
 	messages := make(chan []HostPort)
 	serviceFunc := func(client *capi.Client, serviceName string, messages chan []HostPort) {
@@ -109,6 +127,8 @@ func StartConsulGetService(client *capi.Client, serviceName string) chan []HostP
 	go serviceFunc(client, serviceName, messages)
 	return messages
 }
+
+// func HandleClientWithoutSPNEGO
 
 func HandleClient(conn *net.TCPConn, proxyHost string, spnegoCli *SPNEGOClient, debug bool, errCount *int) {
 	if *errCount > MAX_ERROR_COUNT {
@@ -139,33 +159,28 @@ func HandleClient(conn *net.TCPConn, proxyHost string, spnegoCli *SPNEGOClient, 
 
 	// get the SPNEGO token that we will use for this client
 
+	if debug {
+		if spnegoCli == nil {
+			logger.Print("no SPNEGO client is set, so no Kerberos auth happening (this is fine)")
+		}
+	}
 	processedCounter := 0
 	var wg sync.WaitGroup
 	for {
-		token, err := spnegoCli.GetToken()
-		if err != nil {
-			logger.Printf("failed to get SPNEGO token: %v", err)
-			time.Sleep(PAUSE_TIME_WHEN_ERROR)
+		req, err := readRequestAndSetAuthorization(reqReader, spnegoCli)
+		if err != nil && !errors.Is(err, io.EOF) {
+			logger.Printf("failed to read request or to get SPNEGO token: %v", err)
 			*errCount += 1
-			return
+			time.Sleep(PAUSE_TIME_WHEN_NO_DATA)
+			continue
 		}
-		authHeader := "Negotiate " + token
-
-		req, err := http.ReadRequest(reqReader)
-
-		if err != nil {
-			if !errors.Is(err, io.EOF) && !errors.Is(err, net.ErrClosed) {
-				logger.Printf("failed to read request: %v", err)
-				*errCount += 1
-			}
+		if errors.Is(err, net.ErrClosed) {
+			logger.Print("HandleClient: socket closed")
 			break
 		}
 		logger.Printf("Read request: %s", req.URL)
 		req.Host = proxyHost
-		req.Header.Set("Authorization", authHeader)
-
 		req.Header.Set("User-agent", "hadoop-proxy/0.1")
-
 		req.WriteProxy(proxyConn)
 
 		forward := func(from, to *net.TCPConn, tag string, isResponse bool) {
@@ -202,4 +217,27 @@ func HandleClient(conn *net.TCPConn, proxyHost string, spnegoCli *SPNEGOClient, 
 	}
 	wg.Wait()
 	logger.Printf("[ProcessedCounter] Handled %d requests\n", processedCounter)
+}
+
+func readRequestAndSetAuthorization(reqReader *bufio.Reader, spnegoCli *SPNEGOClient) (*http.Request, error) {
+	authHeader := ""
+	req, err := http.ReadRequest(reqReader)
+	if err != nil {
+		return nil, err
+	}
+	if spnegoCli != nil {
+		token, err := spnegoCli.GetToken()
+		if err != nil {
+			logger.Printf("failed to get SPNEGO token: %v", err)
+			time.Sleep(PAUSE_TIME_WHEN_ERROR)
+
+			return nil, err
+		}
+		authHeader = "Negotiate " + token
+	}
+
+	if len(authHeader) > 0 {
+		req.Header.Set("Authorization", authHeader)
+	}
+	return req, nil
 }
