@@ -1,4 +1,4 @@
-module app
+module github.com/matchaxnb/spnegoproxy
 
 go 1.23.1
 
