@@ -1,9 +1,8 @@
-module app
+module github.com/matchaxnb/spnegoproxy/plainproxy
 
 go 1.23.1
 
-require github.com/matchaxnb/spnegoproxy/spnegoproxy v0.0.0
-replace github.com/matchaxnb/spnegoproxy/spnegoproxy v0.0.0 => ../../spnegoproxy
+require github.com/matchaxnb/spnegoproxy/spnegoproxy v0.0.0-20241127134644-1909c37e9b8b
 
 require (
 	github.com/armon/go-metrics v0.4.1 // indirect

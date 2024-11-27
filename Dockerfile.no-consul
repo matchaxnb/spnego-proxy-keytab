@@ -20,5 +20,5 @@ ENV LISTEN_ADDRESS="0.0.0.0:50070" KRB5_CONF="/data/krb5.conf" \
     SPN_SERVICE_TYPE="HTTP" APP_DEBUG="false"
 SHELL [ "/bin/sh", "-c"]
 EXPOSE 50070
-COPY startup.sh /startup.sh
+COPY startup-no-consul.sh /startup.sh
 ENTRYPOINT [ "/startup.sh"]

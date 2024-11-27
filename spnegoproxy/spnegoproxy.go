@@ -173,9 +173,11 @@ func HandleClient(conn *net.TCPConn, proxyHost string, spnegoCli *SPNEGOClient, 
 			*errCount += 1
 			time.Sleep(PAUSE_TIME_WHEN_NO_DATA)
 			continue
-		}
-		if errors.Is(err, net.ErrClosed) {
+		} else if err != nil && errors.Is(err, net.ErrClosed) {
 			logger.Print("HandleClient: socket closed")
+			break
+		} else if err != nil {
+			logger.Printf("Could not get request, will break: %v", err)
 			break
 		}
 		logger.Printf("Read request: %s", req.URL)
