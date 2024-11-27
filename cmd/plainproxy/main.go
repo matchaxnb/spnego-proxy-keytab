@@ -14,6 +14,7 @@ var logger = log.New(os.Stderr, "", log.LstdFlags)
 func main() {
 	addr := flag.String("addr", "0.0.0.0:50070", "bind address")
 	toProxy := flag.String("proxy-service", "", "host:port for the service to proxy to")
+	properUsername := flag.String("proper-username", "", "for WebHDFS, user.name value to force-set")
 	debug := flag.Bool("debug", true, "turn on debugging")
 	flag.Parse()
 	if *debug {
@@ -37,6 +38,6 @@ func main() {
 		if err != nil {
 			logger.Panic(err)
 		}
-		go spnegoproxy.HandleClient(conn, *toProxy, nil, *debug, &errorCount)
+		go spnegoproxy.HandleClient(conn, *toProxy, nil, *properUsername, *debug, &errorCount)
 	}
 }

@@ -22,6 +22,7 @@ func main() {
 	proxy := flag.String("proxy-service", "your-service-to-proxy", "proxy consul service")
 	spnServiceType := flag.String("spn-service-type", "HTTP", "SPN service type")
 	keytabFile := flag.String("keytab-file", "krb5.keytab", "keytab file path")
+	properUsername := flag.String("proper-username", "", "for WebHDFS, user.name value to force-set")
 	debug := flag.Bool("debug", true, "turn on debugging")
 	flag.Parse()
 	keytab, conf := spnegoproxy.LoadKrb5Config(keytabFile, cfgFile)
@@ -56,6 +57,6 @@ func main() {
 		if err != nil {
 			logger.Panic(err)
 		}
-		go spnegoproxy.HandleClient(conn, realHost, spnegoClient, *debug, &errorCount)
+		go spnegoproxy.HandleClient(conn, realHost, spnegoClient, *properUsername, *debug, &errorCount)
 	}
 }

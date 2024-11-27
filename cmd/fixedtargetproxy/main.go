@@ -15,11 +15,12 @@ var logger = log.New(os.Stderr, "", log.LstdFlags)
 func main() {
 	addr := flag.String("addr", "0.0.0.0:50070", "bind address")
 	cfgFile := flag.String("config", "krb5.conf", "krb5 config file")
-	user := flag.String("user", "your.user/your.host", "user name")
+	user := flag.String("user", "your.user/your.host", "Kerberos user name")
 	realm := flag.String("realm", "YOUR.REALM", "realm")
 	toProxy := flag.String("proxy-service", "your-service-to-proxy", "host:port for the service to proxy to")
 	spnServiceType := flag.String("spn-service-type", "HTTP", "SPN service type")
 	keytabFile := flag.String("keytab-file", "krb5.keytab", "keytab file path")
+	properUsername := flag.String("proper-username", "", "for WebHDFS, user.name value to force-set")
 	debug := flag.Bool("debug", true, "turn on debugging")
 	flag.Parse()
 	keytab, conf := spnegoproxy.LoadKrb5Config(keytabFile, cfgFile)
@@ -53,6 +54,6 @@ func main() {
 		if err != nil {
 			logger.Panic(err)
 		}
-		go spnegoproxy.HandleClient(conn, realHost, spnegoClient, *debug, &errorCount)
+		go spnegoproxy.HandleClient(conn, realHost, spnegoClient, *properUsername, *debug, &errorCount)
 	}
 }

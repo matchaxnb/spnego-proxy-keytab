@@ -130,7 +130,9 @@ func StartConsulGetService(client *capi.Client, serviceName string) chan []HostP
 
 // func HandleClientWithoutSPNEGO
 
-func HandleClient(conn *net.TCPConn, proxyHost string, spnegoCli *SPNEGOClient, debug bool, errCount *int) {
+func HandleClient(conn *net.TCPConn, proxyHost string, spnegoCli *SPNEGOClient, properUsername string, debug bool, errCount *int) {
+	shouldChangeUsername := len(properUsername) > 0
+
 	if *errCount > MAX_ERROR_COUNT {
 		log.Fatalf("Too many errors (%d), exiting", *errCount)
 	}
@@ -180,9 +182,21 @@ func HandleClient(conn *net.TCPConn, proxyHost string, spnegoCli *SPNEGOClient, 
 			logger.Printf("Could not get request, will break: %v", err)
 			break
 		}
-		logger.Printf("Read request: %s", req.URL)
+		if debug {
+			logger.Printf("Read request: %s", req.URL)
+		}
 		req.Host = proxyHost
 		req.Header.Set("User-agent", "hadoop-proxy/0.1")
+		if shouldChangeUsername {
+			query := req.URL.Query()
+			if query.Has("user.name") {
+				query.Set("user.name", properUsername)
+			}
+			req.URL.RawQuery = query.Encode()
+			if debug {
+				logger.Printf("Canonicalized URL to %s", req.URL)
+			}
+		}
 		req.WriteProxy(proxyConn)
 
 		forward := func(from, to *net.TCPConn, tag string, isResponse bool) {
