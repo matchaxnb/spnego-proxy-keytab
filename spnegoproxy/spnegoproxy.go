@@ -128,8 +128,6 @@ func StartConsulGetService(client *capi.Client, serviceName string) chan []HostP
 	return messages
 }
 
-// func HandleClientWithoutSPNEGO
-
 func HandleClient(conn *net.TCPConn, proxyHost string, spnegoCli *SPNEGOClient, properUsername string, debug bool, errCount *int) {
 	shouldChangeUsername := len(properUsername) > 0
 
@@ -178,6 +176,12 @@ func HandleClient(conn *net.TCPConn, proxyHost string, spnegoCli *SPNEGOClient, 
 		} else if err != nil && errors.Is(err, net.ErrClosed) {
 			logger.Print("HandleClient: socket closed")
 			break
+		} else if errors.Is(err, io.EOF) {
+			// just a simple break
+			if debug {
+				logger.Printf("EOF reached, breaking")
+				break
+			}
 		} else if err != nil {
 			logger.Printf("Could not get request, will break: %v", err)
 			break
@@ -197,6 +201,7 @@ func HandleClient(conn *net.TCPConn, proxyHost string, spnegoCli *SPNEGOClient, 
 				logger.Printf("Canonicalized URL to %s", req.URL)
 			}
 		}
+		go handleRequestCallbacks(req)
 		req.WriteProxy(proxyConn)
 
 		forward := func(from, to *net.TCPConn, tag string, isResponse bool) {

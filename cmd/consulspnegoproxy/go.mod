@@ -34,3 +34,5 @@ require (
 	golang.org/x/net v0.24.0 // indirect
 	golang.org/x/sys v0.19.0 // indirect
 )
+
+replace github.com/matchaxnb/spnegoproxy/spnegoproxy v0.0.0-20241127134644-1909c37e9b8b => ../../spnegoproxy

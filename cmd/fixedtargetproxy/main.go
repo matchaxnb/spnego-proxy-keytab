@@ -21,6 +21,7 @@ func main() {
 	spnServiceType := flag.String("spn-service-type", "HTTP", "SPN service type")
 	keytabFile := flag.String("keytab-file", "krb5.keytab", "keytab file path")
 	properUsername := flag.String("proper-username", "", "for WebHDFS, user.name value to force-set")
+	metricsAddrS := flag.String("metrics-addr", "", "optional address to expose a prometheus metrics endpoint")
 	debug := flag.Bool("debug", true, "turn on debugging")
 	flag.Parse()
 	keytab, conf := spnegoproxy.LoadKrb5Config(keytabFile, cfgFile)
@@ -47,6 +48,14 @@ func main() {
 	if err != nil {
 		logger.Panic(err)
 	}
+	eventChannel := make(spnegoproxy.WebHDFSEventChannel)
+	if len(*metricsAddrS) > 0 {
+		// we have a prometheus metrics endpoint
+		spnegoproxy.EnableWebHDFSTracking(eventChannel)
+		spnegoproxy.ExposeMetrics(*metricsAddrS, eventChannel)
+		go spnegoproxy.ConsumeWebHDFSEventStream(eventChannel)
+	}
+
 	errorCount := 0
 	defer connListener.Close()
 	for {

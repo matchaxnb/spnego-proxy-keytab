@@ -3,3 +3,6 @@ app
 spnego-proxy
 Makefile
 plain-proxy
+cmd/consulspnegoproxy/consulspnegoproxy
+cmd/fixedtargetproxy/fixedtargetproxy
+cmd/plainproxy/plainproxy
