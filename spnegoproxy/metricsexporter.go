@@ -7,7 +7,7 @@ import (
 
 func ExposeMetrics(listenAddr string, events WebHDFSEventChannel) {
 	srv := http.NewServeMux()
-
+	logger.Printf("Configuring handlers for metrics on %s\n", listenAddr)
 	srv.HandleFunc("/metrics", handleMetrics)
 	srv.HandleFunc("/metrics/", handleMetrics)
 	srv.HandleFunc("/", handleRoot)
@@ -20,10 +20,12 @@ func handleRoot(w http.ResponseWriter, r *http.Request) {
 
 func handleMetrics(w http.ResponseWriter, r *http.Request) {
 	// ctx := r.Context()
+	logger.Print("Requested metrics")
 	io.WriteString(w, webHDFSEvents.String())
 
 }
 
 func serveMetrics(addr string, server *http.ServeMux) {
+	logger.Printf("Serving metrics on %s\n", addr)
 	http.ListenAndServe(addr, server)
 }

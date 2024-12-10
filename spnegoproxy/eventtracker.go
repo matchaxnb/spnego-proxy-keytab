@@ -99,7 +99,7 @@ func (events *SPNEGOProxyWebHDFSEventsTable) String() string {
 	sb.WriteString(fmt.Sprintf("webhdfs_get_getdelegationtoken %d\n", events.get_getdelegationtoken))
 	sb.WriteString(fmt.Sprintf("webhdfs_get_total %d\n",
 		events.get_open+
-			events.get_getfilechecksum+
+			events.get_getfilestatus+
 			events.get_liststatus+
 			events.get_getcontentsummary+
 			events.get_getfilechecksum+

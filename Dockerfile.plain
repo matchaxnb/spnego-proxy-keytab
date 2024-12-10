@@ -14,7 +14,8 @@ COPY --from=0 /spnego-proxy /spnego-proxy
 ENV LISTEN_ADDRESS="0.0.0.0:50070" \
     SERVICE_TO_PROXY="" \
     APP_DEBUG="false" \
-    METRICS_ADDRESS="0.0.0.0:9100" PROPER_USER_NAME=""
+    METRICS_ADDRESS="0.0.0.0:9100" PROPER_USER_NAME="" \
+    DROP_USER_NAME="false"
 SHELL [ "/bin/sh", "-c"]
 EXPOSE 50070
 COPY startup-plain.sh /startup.sh

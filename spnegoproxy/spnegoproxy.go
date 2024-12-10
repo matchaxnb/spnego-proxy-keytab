@@ -128,8 +128,46 @@ func StartConsulGetService(client *capi.Client, serviceName string) chan []HostP
 	return messages
 }
 
-func HandleClient(conn *net.TCPConn, proxyHost string, spnegoCli *SPNEGOClient, properUsername string, debug bool, errCount *int) {
-	shouldChangeUsername := len(properUsername) > 0
+func enforceUserName(properUsername string, req *http.Request) {
+	q := req.URL.Query()
+	if q.Get("user.name") != properUsername {
+		q.Set("user.name", properUsername)
+		req.URL.RawQuery = q.Encode()
+	}
+}
+
+func EnforceUserName(properUsername string, debug bool) {
+	if !debug {
+		RegisterRequestInspectionCallback(func(r *http.Request) {
+			enforceUserName(properUsername, r)
+		})
+	} else {
+		RegisterRequestInspectionCallback(func(r *http.Request) {
+			enforceUserName(properUsername, r)
+			logger.Printf("[DEBUG] EnforceUserName, now request is %s", r.URL.RawQuery)
+		})
+	}
+
+}
+
+func dropUsername(req *http.Request) {
+	q := req.URL.Query()
+	q.Del("user.name")
+	req.URL.RawQuery = q.Encode()
+}
+
+func DropUsername(debug bool) {
+	if !debug {
+		RegisterRequestInspectionCallback(dropUsername)
+	} else {
+		RegisterRequestInspectionCallback(func(req *http.Request) {
+			dropUsername(req)
+			logger.Printf("[DEBUG] DropUsername, now request is %s", req.URL.RawQuery)
+		})
+	}
+}
+
+func HandleClient(conn *net.TCPConn, proxyHost string, spnegoCli *SPNEGOClient, debug bool, errCount *int) {
 
 	if *errCount > MAX_ERROR_COUNT {
 		log.Fatalf("Too many errors (%d), exiting", *errCount)
@@ -180,8 +218,8 @@ func HandleClient(conn *net.TCPConn, proxyHost string, spnegoCli *SPNEGOClient, 
 			// just a simple break
 			if debug {
 				logger.Printf("EOF reached, breaking")
-				break
 			}
+			break
 		} else if err != nil {
 			logger.Printf("Could not get request, will break: %v", err)
 			break
@@ -191,17 +229,7 @@ func HandleClient(conn *net.TCPConn, proxyHost string, spnegoCli *SPNEGOClient, 
 		}
 		req.Host = proxyHost
 		req.Header.Set("User-agent", "hadoop-proxy/0.1")
-		if shouldChangeUsername {
-			query := req.URL.Query()
-			if query.Has("user.name") {
-				query.Set("user.name", properUsername)
-			}
-			req.URL.RawQuery = query.Encode()
-			if debug {
-				logger.Printf("Canonicalized URL to %s", req.URL)
-			}
-		}
-		go handleRequestCallbacks(req)
+		handleRequestCallbacks(req) // needs to be synchronous
 		req.WriteProxy(proxyConn)
 
 		forward := func(from, to *net.TCPConn, tag string, isResponse bool) {
@@ -220,8 +248,8 @@ func HandleClient(conn *net.TCPConn, proxyHost string, spnegoCli *SPNEGOClient, 
 				if err != nil {
 					logger.Panicf("[%s] Could not read response: %s", tag, err)
 				}
-				//res.Header.Del("Www-Authenticate")
-				//res.Header.Del("Setb-Cookie")
+				res.Header.Del("Www-Authenticate")
+				res.Header.Del("Set-Cookie")
 				res.Write(to)
 			}
 			logger.Printf("[%s] written\n", tag)

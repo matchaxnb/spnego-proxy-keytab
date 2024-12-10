@@ -1,8 +1,7 @@
 krb5.*
 app
 spnego-proxy
-Makefile
+Makefile.test
 plain-proxy
-cmd/consulspnegoproxy/consulspnegoproxy
-cmd/fixedtargetproxy/fixedtargetproxy
-cmd/plainproxy/plainproxy
+fixed-target-proxy
+consul-proxy

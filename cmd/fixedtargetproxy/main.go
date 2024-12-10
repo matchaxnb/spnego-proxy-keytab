@@ -1,4 +1,4 @@
-package fixedtargetproxy
+package main
 
 import (
 	"flag"
@@ -21,6 +21,7 @@ func main() {
 	spnServiceType := flag.String("spn-service-type", "HTTP", "SPN service type")
 	keytabFile := flag.String("keytab-file", "krb5.keytab", "keytab file path")
 	properUsername := flag.String("proper-username", "", "for WebHDFS, user.name value to force-set")
+	dropUsername := flag.Bool("drop-username", false, "drop user.name from all queries")
 	metricsAddrS := flag.String("metrics-addr", "", "optional address to expose a prometheus metrics endpoint")
 	debug := flag.Bool("debug", true, "turn on debugging")
 	flag.Parse()
@@ -51,11 +52,17 @@ func main() {
 	eventChannel := make(spnegoproxy.WebHDFSEventChannel)
 	if len(*metricsAddrS) > 0 {
 		// we have a prometheus metrics endpoint
+		logger.Print("Starting metrics handler")
 		spnegoproxy.EnableWebHDFSTracking(eventChannel)
 		spnegoproxy.ExposeMetrics(*metricsAddrS, eventChannel)
 		go spnegoproxy.ConsumeWebHDFSEventStream(eventChannel)
 	}
 
+	if *dropUsername {
+		spnegoproxy.DropUsername(*debug)
+	} else if len(*properUsername) > 0 {
+		spnegoproxy.EnforceUserName(*properUsername, *debug)
+	}
 	errorCount := 0
 	defer connListener.Close()
 	for {
@@ -63,6 +70,6 @@ func main() {
 		if err != nil {
 			logger.Panic(err)
 		}
-		go spnegoproxy.HandleClient(conn, realHost, spnegoClient, *properUsername, *debug, &errorCount)
+		go spnegoproxy.HandleClient(conn, realHost, spnegoClient, *debug, &errorCount)
 	}
 }
