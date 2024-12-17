@@ -5,3 +5,4 @@ Makefile.test
 plain-proxy
 fixed-target-proxy
 consul-proxy
+*-static
