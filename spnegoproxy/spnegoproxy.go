@@ -229,6 +229,7 @@ func HandleClient(conn *net.TCPConn, proxyHost string, spnegoCli *SPNEGOClient, 
 		}
 		req.Host = proxyHost
 		req.Header.Set("User-agent", "hadoop-proxy/0.1")
+                req.Close = true
 		handleRequestCallbacks(req) // needs to be synchronous
 		req.WriteProxy(proxyConn)
 
